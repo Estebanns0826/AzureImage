@@ -34,4 +34,4 @@ def classify_image_with_azure(image_file):
         return {'error': 'Error al clasificar la imagen'}, response.status_code
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True)
