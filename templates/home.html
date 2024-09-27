@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página para Predecir Imágenes</title>
+    <title>Página para Detectar Objetos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
             margin: 0;
@@ -13,17 +14,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             height: 100vh;
-            overflow: hidden;
-            position: relative;
+            overflow-y: auto;
         }
 
         h1 {
             color: #ffffff;
             margin-bottom: 20px;
-            text-align: center;
-            z-index: 1;
         }
 
         button {
@@ -36,8 +33,6 @@
             background-color: #007bff;
             color: white;
             transition: background-color 0.3s;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            z-index: 1;
         }
 
         button:hover {
@@ -45,104 +40,144 @@
         }
 
         #imageContainer {
+            position: relative;
             border: 2px dashed #007bff;
             padding: 20px;
             margin: 20px;
             text-align: center;
-            width: 300px;
-            height: 300px; /* Altura fija */
-            display: none;
-            overflow: hidden; /* Ocultar desbordamiento */
-            z-index: 1;
+            width: 600px;
+            height: 400px;
+            overflow: hidden;
         }
 
         #uploadedImage {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: cover; /* Mantener proporciones */
-            display: block;
-        }
-
-        #loadingOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
+            object-fit: cover;
         }
 
-        #loading {
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #ffffff;
-        }
-
-        .loading-animation {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #007bff;
-            border-top: 5px solid transparent;
-            border-radius: 50%;
-            animation: spin 2s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .bounding-box {
+            position: absolute;
+            border: 2px solid red;
+            background-color: rgba(255, 0, 0, 0.2);
+            pointer-events: none;
         }
 
         #resultContainer {
             margin-top: 20px;
             font-weight: bold;
             color: #ffffff;
+        }
+
+        #classTableContainer {
+            margin-top: 20px;
+            color: #ffffff;
             display: none;
-            text-align: center;
-            z-index: 1;
+            width: 600px; /* Asegúrate de que la tabla tenga el mismo ancho que el contenedor de la imagen */
         }
 
-        .bubble {
-            position: absolute;
-            bottom: -100px;
-            background: rgba(0, 123, 255, 0.7);
-            border-radius: 50%;
-            animation: rise 20s infinite;
-            opacity: 0.6;
+        table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        @keyframes rise {
-            0% {
-                transform: translateY(0);
-                opacity: 0.7;
-            }
-            100% {
-                transform: translateY(-800px);
-                opacity: 0;
-            }
+        th, td {
+            border: 1px solid #007bff;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007bff;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: #222;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #007bff;
+            width: 400px;
+            border-radius: 5px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: white;
+            cursor: pointer;
+        }
+
+        label {
+            color: #ffffff;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
         }
     </style>
 </head>
 <body>
-    <h1>Sube una Imagen para Clasificar</h1>
+    <h1>Sube una Imagen para Detección</h1>
+
     <div id="imageContainer">
-        <img id="uploadedImage" src="" alt="Imagen subida" />
+        <img id="uploadedImage" src="" alt="Imagen subida">
     </div>
+
     <div>
         <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)" style="display: none;">
         <button onclick="document.getElementById('imageInput').click()">Subir Imagen</button>
         <button onclick="classifyImage()">Clasificar Imagen</button>
+        <button onclick="openModal()"><i class="fas fa-cog"></i></button>
     </div>
-    <div id="resultContainer"></div>
 
-    <div id="loadingOverlay">
-        <div id="loading">
-            Clasificando el objeto...
-            <div class="loading-animation"></div>
+    <div id="resultContainer"></div>
+    <div id="classTableContainer">
+        <table id="classTable">
+            <thead>
+                <tr>
+                    <th>Clase</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody id="classTableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 style="color: #ffffff;">Configuración de API</h2>
+            <label for="azureEndpoint">Azure Endpoint:</label>
+            <input type="text" id="azureEndpoint" placeholder="Introduce el endpoint" value="https://estebanlearnig-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/f572c94f-36f5-4d30-9e9d-2723d1fd1673/detect/iterations/Iteration1/image">
+            <label for="subscriptionKey">Subscription Key:</label>
+            <input type="text" id="subscriptionKey" placeholder="Introduce la clave" value="a77cb15567ba4c5ab7eb8fde290a2d4b">
+            <button onclick="closeModal()">Guardar</button>
         </div>
     </div>
 
@@ -151,14 +186,8 @@
 
         function loadImage(event) {
             const img = document.getElementById('uploadedImage');
-            const imageContainer = document.getElementById('imageContainer');
-
-            imageContainer.style.display = 'block';
-            img.style.display = 'none';
-
             uploadedImageFile = event.target.files[0];
             img.src = URL.createObjectURL(uploadedImageFile);
-            img.style.display = 'block';
         }
 
         function classifyImage() {
@@ -167,11 +196,13 @@
                 return;
             }
 
+            const endpoint = document.getElementById('azureEndpoint').value;
+            const key = document.getElementById('subscriptionKey').value;
+
             const formData = new FormData();
             formData.append('image', uploadedImageFile);
-
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            loadingOverlay.style.display = 'flex'; // Mostrar overlay de carga
+            formData.append('endpoint', endpoint);
+            formData.append('key', key);
 
             fetch('/enviar_imagen', {
                 method: 'POST',
@@ -179,44 +210,83 @@
             })
             .then(response => response.json())
             .then(data => {
-                loadingOverlay.style.display = 'none'; // Ocultar overlay de carga
-                const resultContainer = document.getElementById('resultContainer');
-                resultContainer.style.display = 'block';
-
                 if (data.predictions && data.predictions.length > 0) {
-                    const highestPrediction = data.predictions.reduce((prev, current) => {
-                        return (prev.probability > current.probability) ? prev : current;
-                    });
-
-                    resultContainer.innerText = `Predicción: ${highestPrediction.tagName} (${(highestPrediction.probability * 100).toFixed(2)}%)`;
+                    drawBoundingBoxes(data.predictions);
+                    populateClassTable(data.predictions);
                 } else {
-                    resultContainer.innerText = 'No se encontraron predicciones.';
+                    document.getElementById('resultContainer').innerText = 'No se encontraron objetos con probabilidad > 70%.';
+                    document.getElementById('classTableContainer').style.display = 'none';
                 }
             })
             .catch(error => {
-                loadingOverlay.style.display = 'none'; // Ocultar overlay de carga
                 console.error('Error:', error);
                 alert('Hubo un error al clasificar la imagen.');
             });
         }
 
-        function createBubble() {
-            const bubble = document.createElement('div');
-            const size = Math.random() * 60 + 20; // Tamaño aleatorio
-            bubble.className = 'bubble';
-            bubble.style.width = `${size}px`;
-            bubble.style.height = `${size}px`;
-            bubble.style.left = Math.random() * window.innerWidth + 'px';
-            document.body.appendChild(bubble);
+        function drawBoundingBoxes(predictions) {
+            const imageContainer = document.getElementById('imageContainer');
+            const img = document.getElementById('uploadedImage');
 
-            // Eliminar la burbuja después de que suba
-            bubble.addEventListener('animationend', () => {
-                bubble.remove();
+            const oldBoxes = document.getElementsByClassName('bounding-box');
+            while (oldBoxes.length > 0) {
+                oldBoxes[0].parentNode.removeChild(oldBoxes[0]);
+            }
+
+            predictions.forEach(prediction => {
+                if (prediction.probability > 0.7) {
+                    const box = prediction.boundingBox;
+                    const boundingBox = document.createElement('div');
+                    boundingBox.classList.add('bounding-box');
+
+                    const imageWidth = img.offsetWidth;
+                    const imageHeight = img.offsetHeight;
+
+                    boundingBox.style.left = `${box.left * imageWidth}px`;
+                    boundingBox.style.top = `${box.top * imageHeight}px`;
+                    boundingBox.style.width = `${box.width * imageWidth}px`;
+                    boundingBox.style.height = `${box.height * imageHeight}px`;
+
+                    imageContainer.appendChild(boundingBox);
+                }
             });
         }
 
-        // Crear burbujas cada 1 segundo
-        setInterval(createBubble, 1000);
+        function populateClassTable(predictions) {
+            const classCount = {};
+            predictions.forEach(prediction => {
+                if (prediction.probability > 0.7) {
+                    const className = prediction.tagName;
+                    classCount[className] = (classCount[className] || 0) + 1;
+                }
+            });
+
+            const classTableBody = document.getElementById('classTableBody');
+            classTableBody.innerHTML = '';
+            Object.keys(classCount).forEach(className => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${className}</td><td>${classCount[className]}</td>`;
+                classTableBody.appendChild(row);
+            });
+
+            document.getElementById('classTableContainer').style.display = 'block';
+        }
+
+        function openModal() {
+            document.getElementById('myModal').style.display = 'block';
+            document.body.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        }
+
+        function closeModal() {
+            document.getElementById('myModal').style.display = 'none';
+            document.body.style.backgroundColor = 'black';
+        }
+
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('myModal')) {
+                closeModal();
+            }
+        }
     </script>
 </body>
 </html>
