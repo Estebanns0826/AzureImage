@@ -3,10 +3,6 @@ import requests
 
 app = Flask(__name__)
 
-# URL del endpoint de Azure para el modelo de ML
-azure_endpoint = "https://maincraxd-prediction.cognitiveservices.azure.com/customvision/v3.0/Prediction/853c5ffe-9de8-4f03-ac03-5586ac847252/classify/iterations/pruebaproyecto/image"
-subscription_key = "46136165095e4925b2ea68a1b5496e18"
-
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -14,24 +10,28 @@ def home():
 @app.route('/enviar_imagen', methods=['POST'])
 def recibir_clasificacion():
     file = request.files.get('image')
+    endpoint = request.form.get('endpoint')
+    key = request.form.get('key')
+
     if file:
-        response = classify_image_with_azure(file.read())
+        response = classify_image_with_azure(file.read(), endpoint, key)
         return jsonify(response)
     else:
         return jsonify({'error': 'No se recibió ninguna imagen'}), 400
 
-def classify_image_with_azure(image_file):
+def classify_image_with_azure(image_file, endpoint, key):
     headers = {
         'Content-Type': 'application/octet-stream',
-        'Prediction-Key': subscription_key
+        'Prediction-Key': key
     }
 
-    response = requests.post(azure_endpoint, headers=headers, data=image_file)
+    response = requests.post(endpoint, headers=headers, data=image_file)
     
     if response.status_code == 200:
         return response.json()
     else:
-        return {'error': 'Error al clasificar la imagen'}, response.status_code
+        print(f"Error {response.status_code}: {response.text}")
+        return {'error': 'Error al clasificar la imagen', 'details': response.text}, response.status_code
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=3500, debug=True)

@@ -61,6 +61,11 @@
             border: 2px solid red;
             background-color: rgba(255, 0, 0, 0.2);
             pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
         }
 
         #resultContainer {
@@ -73,7 +78,7 @@
             margin-top: 20px;
             color: #ffffff;
             display: none;
-            width: 600px; /* Asegúrate de que la tabla tenga el mismo ancho que el contenedor de la imagen */
+            width: 600px; 
         }
 
         table {
@@ -143,7 +148,7 @@
     </style>
 </head>
 <body>
-    <h1>Sube una Imagen para Detección</h1>
+    <h1>Detector de vehiculos en el carril del mio</h1>
 
     <div id="imageContainer">
         <img id="uploadedImage" src="" alt="Imagen subida">
@@ -214,7 +219,7 @@
                     drawBoundingBoxes(data.predictions);
                     populateClassTable(data.predictions);
                 } else {
-                    document.getElementById('resultContainer').innerText = 'No se encontraron objetos con probabilidad > 70%.';
+                    document.getElementById('resultContainer').innerText = '';
                     document.getElementById('classTableContainer').style.display = 'none';
                 }
             })
@@ -234,7 +239,7 @@
             }
 
             predictions.forEach(prediction => {
-                if (prediction.probability > 0.7) {
+                if (prediction.probability > 0.96) {
                     const box = prediction.boundingBox;
                     const boundingBox = document.createElement('div');
                     boundingBox.classList.add('bounding-box');
@@ -247,6 +252,7 @@
                     boundingBox.style.width = `${box.width * imageWidth}px`;
                     boundingBox.style.height = `${box.height * imageHeight}px`;
 
+                    boundingBox.innerText = prediction.tagName; // Mostrar el nombre de la clase
                     imageContainer.appendChild(boundingBox);
                 }
             });
@@ -255,7 +261,7 @@
         function populateClassTable(predictions) {
             const classCount = {};
             predictions.forEach(prediction => {
-                if (prediction.probability > 0.7) {
+                if (prediction.probability > 0.96) { // Cambiar a 0.96
                     const className = prediction.tagName;
                     classCount[className] = (classCount[className] || 0) + 1;
                 }
